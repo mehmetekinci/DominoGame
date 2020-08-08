@@ -1,92 +1,121 @@
-const tiles = [
-  [0, 0],
-  [0, 1],
-  [0, 2],
-  [0, 3],
-  [0, 4],
-  [0, 5],
-  [0, 6],
-  [1, 1],
-  [1, 2],
-  [1, 3],
-  [1, 4],
-  [1, 5],
-  [1, 6],
-  [2, 2],
-  [2, 3],
-  [2, 4],
-  [2, 5],
-  [2, 6],
-  [3, 3],
-  [3, 4],
-  [3, 5],
-  [3, 6],
-  [4, 4],
-  [4, 5],
-  [4, 6],
-  [5, 5],
-  [5, 6],
-  [6, 6],
-];
+import { tiles } from '/tiles.js';
 
-const ali = [];
-const veli = [];
-const arena = [];
+const player1 = {
+  name: 'First',
+  tiles: [],
+};
+
+const player2 = {
+  name: 'Second',
+  tiles: [],
+};
+
+const arena = {
+  tiles: [],
+};
+
+let isFirstPlayerPlaying = true;
+
+const players = [player1, player2];
+
 const remainingTiles = [...tiles];
 let i;
 
 const drawTile = (sendTo) => {
-  if (remainingTiles.length == 0) return console.log('There is no tile left');
-  const index = Math.ceil(Math.random() * remainingTiles.length) - 1;
+  // get a random number to defined an index
+  const index = Math.floor(Math.random() * remainingTiles.length);
 
-  sendTo.push(remainingTiles[index]);
+  const drawedTile = remainingTiles[index];
+
+  sendTo.push(drawedTile);
   remainingTiles.splice(index, 1);
+
+  return drawedTile;
 };
 
 for (i = 0; i < 7; i++) {
-  drawTile(ali);
-  drawTile(veli);
+  drawTile(players[0].tiles);
+  drawTile(players[1].tiles);
 }
 
-drawTile(arena);
+drawTile(arena.tiles);
 
-const findMatchTileAndPlay = (player) => {
-  const first = arena[0][0];
-  const last = arena[arena.length - 1][1];
+console.log(
+  `Game starting with first tile <${arena.tiles[0][0]}:${arena.tiles[0][1]}>`
+);
+
+const findMatchTileAndPlay = (isSwitching = false) => {
+  const firstTile = arena.tiles[0];
+  const lastTile = arena.tiles[arena.tiles.length - 1];
+  const first = firstTile[0];
+  const last = lastTile[1];
   const obj = {};
 
-  player.find(([a, b], index) => {
+  if (isSwitching) {
+    isFirstPlayerPlaying = !isFirstPlayerPlaying;
+  }
+  const player = isFirstPlayerPlaying ? players[0] : players[1];
+
+  player.tiles.find(([a, b], index) => {
     if (a === first || b === first || a === last || b === last) {
-      obj.tile = player[index];
+      obj.tile = player.tiles[index];
       obj.index = index;
+      if (a === first || b === first) {
+        obj.arenaTile = firstTile;
+      } else {
+        obj.arenaTile = lastTile;
+      }
 
       return obj;
     }
   });
 
   if (!obj.tile) {
-    console.log('There is no tile match');
+    if (remainingTiles.length === 0) {
+      console.log('There is no tile left');
+      console.log('%cThe game ended in a draw.', 'color: red;');
+      return;
+    }
 
-    return drawTile(player);
+    let drawedTile;
+
+    drawedTile = drawTile(player.tiles);
+    // console.log(drawedTile);
+    console.log(
+      `${player.name} can't play, drawing tile <${drawedTile[0]}:${drawedTile[1]}>`
+    );
+
+    return findMatchTileAndPlay();
   }
-
-  const [a, b] = player[obj.index];
+  let originalTile = player.tiles[obj.index];
+  const [a, b] = originalTile;
 
   if (a === first) {
-    arena.unshift(player[obj.index].reverse());
+    originalTile = originalTile.reverse();
+    arena.tiles.unshift(originalTile);
   } else if (b === first) {
-    arena.unshift(player[obj.index]);
+    arena.tiles.unshift(originalTile);
   } else if (a === last) {
-    arena.push(player[obj.index]);
+    arena.tiles.push(originalTile);
   } else if (b === last) {
-    arena.push(player[obj.index].reverse());
+    originalTile = originalTile.reverse();
+    arena.tiles.push(originalTile);
   }
 
-  player.splice(obj.index, 1);
-  return obj;
+  player.tiles.splice(obj.index, 1);
+
+  console.log(
+    `${player.name} plays <${originalTile.join(
+      ':'
+    )}> to connect to tile <${obj.arenaTile.join(':')}> on the board`
+  );
+  console.log(
+    `%cBord is now: <${arena.tiles.map((tile) => tile.join(':')).join('> <')}>`,
+    'color:yellow;'
+  );
+  if (player.tiles.length === 0)
+    return console.log(`%cPlayer ${player.name} has won.`, 'color:lightGreen;');
+  findMatchTileAndPlay(true);
 };
 
-for (let index = 0; index < 1; index++) {
-  const matchenTile = findMatchTileAndPlay(ali);
-  const matchenTile2 = findMatchTileAndPlay(veli);
-}
+findMatchTileAndPlay();
